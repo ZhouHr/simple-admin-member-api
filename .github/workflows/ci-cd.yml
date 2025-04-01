@@ -63,5 +63,5 @@ jobs: # 定义工作流中的作业（一系列步骤）
           script: | # 在服务器上执行的脚本
             cd /data/servers/truck_server/member/
             tar -zxvf api.tar.gz
-            mv ./mms_api ./bin/api && ./service api restart # 替换为你的服务名称，重启服务
+            mv -f ./mms_api ./bin/api && ./service api restart # 替换为你的服务名称，重启服务
             rm -rf ./api.tar.gz
