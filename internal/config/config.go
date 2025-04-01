@@ -27,6 +27,7 @@ type Config struct {
 type ProjectConf struct {
 	UseCaptcha              bool
 	DefaultRankId           uint64
+	DefaultPassword         string `json:",optional"`
 	EmailCaptchaExpiredTime int    `json:",default=600"`
 	SmsTemplateId           string `json:",optional"`
 	SmsAppId                string `json:",optional"`

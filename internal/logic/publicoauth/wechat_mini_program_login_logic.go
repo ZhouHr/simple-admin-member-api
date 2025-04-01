@@ -6,7 +6,6 @@ import (
 	"github.com/suyuan32/simple-admin-common/utils/pointy"
 	"github.com/suyuan32/simple-admin-member-api/internal/logic/publicmember"
 	"github.com/suyuan32/simple-admin-member-rpc/types/mms"
-	"github.com/zeromicro/go-zero/core/errorx"
 	"time"
 
 	"github.com/suyuan32/simple-admin-member-api/internal/svc"
@@ -42,18 +41,43 @@ func (l *WechatMiniProgramLoginLogic) WechatMiniProgramLogin(req *types.WechatMi
 		return nil, err
 	}
 
+	var userId string
+	var rankId uint64
+
 	if data.Total == 0 {
-		return nil, errorx.NewCodeInvalidArgumentError("login.bindWechatToAccount")
+
+		l.Logger.Infof("user %s not found, create a new user", wechatIdData.Msg)
+
+		// return nil, errorx.NewCodeInvalidArgumentError("login.bindWechatToAccount")
+		id, err := l.svcCtx.MmsRpc.CreateMember(l.ctx,
+			&mms.MemberInfo{
+				Username: &wechatIdData.Msg,
+				Password: pointy.GetPointer(l.svcCtx.Config.ProjectConf.DefaultPassword),
+				//Email:    &req.Email,
+				Nickname: &wechatIdData.Msg,
+				WechatId: &wechatIdData.Msg,
+				Status:   pointy.GetPointer(uint32(1)),
+				RankId:   pointy.GetPointer(l.svcCtx.Config.ProjectConf.DefaultRankId),
+			})
+		if err != nil {
+			return nil, err
+		}
+
+		userId = id.GetId()
+		rankId = l.svcCtx.Config.ProjectConf.DefaultRankId
+	} else {
+		userId = *data.Data[0].Id
+		rankId = *data.Data[0].RankId
 	}
 
 	token, err := jwt.NewJwtToken(l.svcCtx.Config.Auth.AccessSecret, time.Now().Unix(),
-		l.svcCtx.Config.Auth.AccessExpire, jwt.WithOption("userId", data.Data[0].Id), jwt.WithOption("rankId",
-			data.Data[0].RankCode), jwt.WithOption("roleId", "invalid"))
+		l.svcCtx.Config.Auth.AccessExpire, jwt.WithOption("userId", &userId), jwt.WithOption("rankId",
+			&rankId), jwt.WithOption("roleId", "invalid"))
 
 	// add token into database
 	expiredAt := time.Now().Add(time.Second * time.Duration(l.svcCtx.Config.Auth.AccessExpire)).UnixMilli()
 	_, err = l.svcCtx.MmsRpc.CreateToken(l.ctx, &mms.TokenInfo{
-		Uuid:      data.Data[0].Id,
+		Uuid:      &userId,
 		Token:     pointy.GetPointer(token),
 		Source:    &l.svcCtx.Config.ProjectConf.WechatMiniOauthProvider,
 		Status:    pointy.GetPointer(uint32(1)),
@@ -67,13 +91,13 @@ func (l *WechatMiniProgramLoginLogic) WechatMiniProgramLogin(req *types.WechatMi
 	return &types.CallbackResp{
 		BaseDataInfo: types.BaseDataInfo{Msg: l.svcCtx.Trans.Trans(l.ctx, "login.loginSuccessTitle")},
 		Data: types.CallbackInfo{
-			UserId:   *data.Data[0].Id,
-			Token:    token,
-			Expire:   expiredAt,
-			Avatar:   *data.Data[0].Avatar,
-			RankId:   *data.Data[0].RankCode,
-			RankName: publicmember.MemberRankData[*data.Data[0].RankId],
-			Nickname: *data.Data[0].Nickname,
+			UserId: userId,
+			Token:  token,
+			Expire: expiredAt,
+			//Avatar:   *data.Data[0].Avatar,
+			RankId:   string(rankId),
+			RankName: publicmember.MemberRankData[rankId],
+			//Nickname: *data.Data[0].Nickname,
 		},
 	}, nil
 }
