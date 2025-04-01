@@ -32,13 +32,11 @@ jobs: # 定义工作流中的作业（一系列步骤）
       - name: Archive build artifact
         run: |
           tar -zcvf  api.tar.gz ./mms_api
-          pwd
-          ls -l
 
-      - name: Debug INFO
-        run: |
-          pwd
-          ls -l
+#      - name: Debug INFO
+#        run: |
+#          pwd
+#          ls -l
 
       - name: Transfer files to server # 步骤的名称
         uses: appleboy/scp-action@v0.1.6 # 使用 appleboy/scp-action@v0.1.6 操作，通过 SCP 传输文件到服务器
@@ -64,8 +62,6 @@ jobs: # 定义工作流中的作业（一系列步骤）
           password: ${{ secrets.SERVER_KEY }} # 服务器的 SSH 私钥，从 GitHub Secrets 中获取
           script: | # 在服务器上执行的脚本
             cd /data/servers/truck_server/member/
-            ls -l ./
             tar -zxvf api.tar.gz
             mv ./mms_api ./bin/api && ./service api restart # 替换为你的服务名称，重启服务
             rm -rf ./api.tar.gz
-            ls -l ./
